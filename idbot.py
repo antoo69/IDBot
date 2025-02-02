@@ -72,8 +72,18 @@ id: `-100{channel.chats[0].id}`
 @app.on_message(filters.command(["start"]))
 def start_handler(client: "Client", message: "types.Message"):
     chat_id = message.chat.id
-    client.send_message(chat_id, "Halo , Saya bot ID telegram\Silahkan masukan username untuk melihat ID telegram anda\nAtau /id username.")
+    user = message.from_user
+    user_details = f"""
+👤 Mention: [{user.first_name}](tg://user?id={user.id})
+🆔 ID kamu: {user.id}
+🌐 Username: @{user.username if user.username else "Tidak ada"}
 
+   keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/Galerifsyrl")]
+    ])
+
+    client.send_message(chat_id, user_details, reply_markup=keyboard, parse_mode="Markdown")
+    
 
 @app.on_message(filters.command(["help"]))
 def help_handler(client: "Client", message: "types.Message"):
