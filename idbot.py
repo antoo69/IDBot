@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 # coding: utf-8
 
-author = "Benny <benny.think@gmail.com>"
+author = "@fsyrl9"
 
 import logging
 import os
@@ -15,7 +15,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
 # Replace the following with your bot's credentials
-TOKEN = os.getenv("TOKEN", "23345148")
+TOKEN = os.getenv("TOKEN", "7568080253:AAFTljQwDwRoP7D1IxmgTcN2Gw1OS-OkFSk")
 APP_ID = os.getenv("APP_ID", "23345148")
 APP_HASH = os.getenv("APP_HASH", "fe37a47fef4345512ed47c17d3306f0b")
 
