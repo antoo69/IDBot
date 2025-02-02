@@ -72,14 +72,14 @@ id: `-100{channel.chats[0].id}`
 @app.on_message(filters.command(["start"]))
 def start_handler(client: "Client", message: "types.Message"):
     chat_id = message.chat.id
-    client.send_message(chat_id, "Welcome to Benny's ID bot.")
+    client.send_message(chat_id, "Halo , Saya bot ID telegram\Silahkan masukan username untuk melihat ID telegram anda\nAtau /id username.")
 
 
 @app.on_message(filters.command(["help"]))
 def help_handler(client: "Client", message: "types.Message"):
     chat_id = message.chat.id
     text = """Forward messages, send username, use /id to get your account's detail.\n
-    My Store : https://t.me/Galerifsyrl\n/getgc untuk melihat ID group atau channel.
+    My Store : @Galerifsyrl\n/getgc untuk melihat ID group atau channel.
     """
     client.send_message(chat_id, text)
 
