@@ -10,11 +10,11 @@ import traceback
 from typing import Any, Union
 
 from pyrogram import Client, filters, types, raw
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from tgbot_ping import get_runtime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
-PROXY = os.getenv("PROXY")
 TOKEN = os.getenv("TOKEN")
 APP_ID = os.getenv("APP_ID")
 APP_HASH = os.getenv("APP_HASH")
@@ -31,13 +31,6 @@ DC_MAP = {
 
 def create_app():
     _app = Client("idbot", APP_ID, APP_HASH, bot_token=TOKEN)
-    if PROXY:
-        _app.proxy = dict(
-            scheme="socks5",
-            hostname=PROXY.split(":")[0],
-            port=int(PROXY.split(":")[1])
-        )
-
     return _app
 
 
@@ -85,13 +78,13 @@ def start_handler(client: "Client", message: "types.Message"):
 @app.on_message(filters.command(["help"]))
 def help_handler(client: "Client", message: "types.Message"):
     chat_id = message.chat.id
-    text = """Forward messages, send username, use /getme to get your account's detail.\n
-    Opensource at GitHub: https://github.com/tgbot-collection/IDBot
+    text = """Forward messages, send username, use /id to get your account's detail.\n
+    My Store : https://t.me/Galerifsyrl\n/getgc untuk melihat ID group atau channel.
     """
     client.send_message(chat_id, text)
 
 
-@app.on_message(filters.command(["getme"]))
+@app.on_message(filters.command(["id"]))
 def getme_handler(client: "Client", message: "types.Message"):
     me = get_user_detail(message.from_user)
     message.reply_text(me, quote=True)
@@ -110,7 +103,7 @@ def start_handler(client: "Client", message: "types.Message"):
     client.send_message(chat_id, msg)
 
 
-@app.on_message(filters.command(["getgroup"]))
+@app.on_message(filters.command(["getgc"]))
 def getgroup_handler(client: "Client", message: "types.Message"):
     me = get_user_detail(message.chat)
     message.reply_text(me, quote=True)
@@ -131,7 +124,10 @@ def getgroup_compatibly_handler(client: "Client", message: "types.Message"):
 def forward_handler(client: "Client", message: "types.Message"):
     fwd = message.forward_from or message.forward_from_chat
     me = get_user_detail(fwd)
-    message.reply_text(me, quote=True)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏪 Channel Store", url="https://t.me/Galerifsyrl")]
+    ])
+    message.reply_text(me, quote=True, reply_markup=keyboard)
 
 
 def get_users(username):
@@ -164,7 +160,10 @@ def private_handler(client: "Client", message: "types.Message"):
             logging.error(traceback.format_exc())
             text = e
 
-    message.reply_text(text, quote=True)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏪 Channel Store", url="https://t.me/Galerifsyrl")]
+    ])
+    message.reply_text(text, quote=True, reply_markup=keyboard)
 
 
 if __name__ == '__main__':
