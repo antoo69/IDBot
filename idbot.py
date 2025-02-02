@@ -71,7 +71,7 @@ Store aman dan terpercaya. Klik di bawah ini.
     ])
 
     # Send user details and store button
-    client.send_message(chat_id, user_details, reply_markup=keyboard, parse_mode="Markdown")
+    client.send_message(chat_id, user_details, reply_markup=keyboard, parse_mode="MarkdownV2")
 
 # Handle forwarded messages (both from group and private)
 @app.on_message(filters.forwarded)
