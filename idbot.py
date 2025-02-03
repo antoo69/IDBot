@@ -39,6 +39,17 @@ def get_user_detail(user: "Union[User, Chat]") -> str:
 🌐 Username: @{user.username if user.username else "Tidak ada"}
     """
 
+def getgroup_handler(group) -> str:
+    global service_count
+    service_count += 1
+    return f"""
+Channel/group detail (you can also forward message to see detail):
+
+🆔 ID: -100{group.chats[0].id}
+🌐 Username: @{group.chats[0].username}
+🏷 Title: {group.chats[0].title}
+    """
+
 def get_channel_detail(channel) -> str:
     global service_count
     service_count += 1
@@ -77,7 +88,33 @@ Store aman dan terpercaya. Klik di bawah ini.
 @app.on_message(filters.forwarded)
 async def forward_handler(client: Client, message: Message):
     fwd = message.forward_from or message.forward_from_chat
-    me = get_user_detail(fwd) if fwd else "Tidak bisa mengambil informasi dari pesan ini."
+    user = message.from_user
+    
+    # Get forwarded message details
+    if message.forward_from_chat:
+        # For messages forwarded from channels/groups
+        me = f"""
+👤 Pengirim:
+  Nama: {user.first_name}
+  ID: {user.id}
+  Username: @{user.username if user.username else "Tidak ada"}
+
+📢 Dari Channel/Grup:
+  Nama: {message.forward_from_chat.title}
+  ID: {message.forward_from_chat.id}
+  Username: @{message.forward_from_chat.username if message.forward_from_chat.username else "Tidak ada"}
+        """
+    else:
+        # For messages forwarded from users
+        me = f"""
+👤 Pengirim:
+  Nama: {user.first_name}
+  ID: {user.id}
+  Username: @{user.username if user.username else "Tidak ada"}
+
+👤 Pesan asli dari:
+{get_user_detail(fwd) if fwd else "Tidak bisa mengambil informasi dari pesan ini."}
+        """
     
     # Add inline keyboard to store
     keyboard = InlineKeyboardMarkup([
