@@ -9,8 +9,8 @@ import re
 import traceback
 from typing import Any, Union
 
-from pyrogram import Client, filters, types
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, User, Chat
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
@@ -20,13 +20,13 @@ APP_ID = os.getenv("APP_ID", "23345148")
 APP_HASH = os.getenv("APP_HASH", "fe37a47fef4345512ed47c17d3306f0b")
 
 def create_app():
-    _app = Client("idbot", APP_ID, APP_HASH, bot_token=TOKEN)
+    _app = Client("idbot", api_id=APP_ID, api_hash=APP_HASH, bot_token=TOKEN)
     return _app
 
 app = create_app()
 service_count = 0
 
-def get_user_detail(user: "Union[types.User, types.Chat]") -> str:
+def get_user_detail(user: "Union[User, Chat]") -> str:
     global service_count
     service_count += 1
     if user is None:
@@ -52,7 +52,7 @@ Channel/group detail (you can also forward message to see detail):
 
 # Handle /start command - directly show the user's ID and information
 @app.on_message(filters.command(["start"]))
-def start_handler(client: "Client", message: "types.Message"):
+async def start_handler(client: Client, message: Message):
     chat_id = message.chat.id
     user = message.from_user
 
@@ -71,11 +71,11 @@ Store aman dan terpercaya. Klik di bawah ini.
     ])
 
     # Send user details and store button
-    client.send_message(chat_id, user_details, reply_markup=keyboard, parse_mode="Markdown")
+    await client.send_message(chat_id, user_details, reply_markup=keyboard)
 
 # Handle forwarded messages (both from group and private)
 @app.on_message(filters.forwarded)
-def forward_handler(client: "Client", message: "types.Message"):
+async def forward_handler(client: Client, message: Message):
     fwd = message.forward_from or message.forward_from_chat
     me = get_user_detail(fwd) if fwd else "Tidak bisa mengambil informasi dari pesan ini."
     
@@ -85,35 +85,35 @@ def forward_handler(client: "Client", message: "types.Message"):
     ])
     
     # Send the forwarded message's user or group details
-    message.reply_text(me, quote=True, reply_markup=keyboard, parse_mode="Markdown")
+    await message.reply_text(me, quote=True, reply_markup=keyboard)
 
 # Handle messages from group chats to get group/channel info
 @app.on_message(filters.text & filters.group)
-def getgroup_compatibly_handler(client: "Client", message: "types.Message"):
+async def getgroup_compatibly_handler(client: Client, message: Message):
     text = message.text
     if getattr(message.forward_from_chat, "type", None) == "channel" or not re.findall(r"^/getgc@.*bot$", text):
         logging.warning("This is from a channel or non-command text")
         return
 
     logging.info("Compatibly getgroup")
-    getgroup_handler(client, message)
+    await getgroup_handler(client, message)
 
 # Get group/channel details if the user forwards from a group/channel
 @app.on_message(filters.command(["getgc"]))
-def getgroup_handler(client: "Client", message: "types.Message"):
+async def getgroup_handler(client: Client, message: Message):
     me = get_user_detail(message.chat)
-    message.reply_text(me, quote=True, parse_mode="Markdown")
+    await message.reply_text(me, quote=True)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
-def private_handler(client: "Client", message: "types.Message"):
+async def private_handler(client: Client, message: Message):
     username = re.sub(r"@+|https://t.me/", "", message.text)
     funcs = [get_users, get_channel]
     text = ""
 
     for func in funcs:
         try:
-            text = func(username)
+            text = await func(username)
             if text:
                 break
         except Exception as e:
@@ -123,18 +123,18 @@ def private_handler(client: "Client", message: "types.Message"):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("Ferdi Store", url="https://t.me/Galerifsyrl")]
     ])
-    message.reply_text(text, quote=True, reply_markup=keyboard, parse_mode="Markdown")
+    await message.reply_text(text, quote=True, reply_markup=keyboard)
 
 # Get user information by username
-def get_users(username):
-    user: "Union[types.User, Any]" = app.get_users(username)
+async def get_users(username):
+    user = await app.get_users(username)
     return get_user_detail(user)
 
 # Get channel information by username
-def get_channel(username):
-    peer: "Union[types.raw.base.InputChannel, Any]" = app.resolve_peer(username)
-    result = app.invoke(
-        types.raw.functions.channels.GetChannels(
+async def get_channel(username):
+    peer = await app.resolve_peer(username)
+    result = await app.invoke(
+        raw.functions.channels.GetChannels(
             id=[peer]
         )
     )
