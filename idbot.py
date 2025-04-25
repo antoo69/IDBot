@@ -8,9 +8,11 @@ import os
 import re
 import traceback
 from typing import Any, Union
+from datetime import datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, User, Chat
+from pyrogram.raw import functions
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
@@ -26,39 +28,67 @@ def create_app():
 app = create_app()
 service_count = 0
 
-def get_user_detail(user: "Union[User, Chat]") -> str:
+async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> tuple:
     global service_count
     service_count += 1
     if user is None:
-        return "Can't get hidden forwards!"
+        return "Can't get hidden forwards!", None
+    
+    # Get user creation date
+    user_dc_id = user.dc_id if hasattr(user, 'dc_id') else None
+    user_date = datetime.fromtimestamp(user.id >> 32) if user.id else None
+    date_str = user_date.strftime('%d %B %Y') if user_date else "Unknown"
+    
+    # Get profile photo if client is provided
+    profile_pic = None
+    if client:
+        photos = await client.get_profile_photos(user.id)
+        if photos:
+            profile_pic = photos[0].file_id
     
     # Create a detailed user info message
-    return f"""
+    text = f"""
 👤 Mention: [{user.first_name}](tg://user?id={user.id})
 🆔 ID kamu: {user.id}
 🌐 Username: @{user.username if user.username else "Tidak ada"}
+📅 Tanggal Pembuatan: {date_str}
+🌍 DC ID: {user_dc_id if user_dc_id else "Unknown"}
     """
+    
+    return text, profile_pic
 
 def getgroup_handler(group) -> str:
     global service_count
     service_count += 1
+    
+    # Get group creation date
+    group_date = datetime.fromtimestamp(group.chats[0].id >> 32)
+    date_str = group_date.strftime('%d %B %Y')
+    
     return f"""
 Channel/group detail (you can also forward message to see detail):
 
 🆔 ID: -100{group.chats[0].id}
 🌐 Username: @{group.chats[0].username}
 🏷 Title: {group.chats[0].title}
+📅 Tanggal Pembuatan: {date_str}
     """
 
 def get_channel_detail(channel) -> str:
     global service_count
     service_count += 1
+    
+    # Get channel creation date
+    channel_date = datetime.fromtimestamp(channel.chats[0].id >> 32)
+    date_str = channel_date.strftime('%d %B %Y')
+    
     return f"""
 Channel/group detail (you can also forward message to see detail):
 
 🆔 ID: -100{channel.chats[0].id}
 🌐 Username: @{channel.chats[0].username}
 🏷 Title: {channel.chats[0].title}
+📅 Tanggal Pembuatan: {date_str}
     """
 
 # Handle /start command - directly show the user's ID and information
@@ -67,22 +97,28 @@ async def start_handler(client: Client, message: Message):
     chat_id = message.chat.id
     user = message.from_user
 
-    # Generate user detail message
-    user_details = f"""
-👤 Mention: [{user.first_name}](tg://user?id={user.id})
-🆔 ID kamu: {user.id}
-🌐 Username: @{user.username if user.username else "Tidak ada"}
+    # Get user details and profile photo
+    user_details, profile_pic = await get_user_detail(user, client)
 
-Store aman dan terpercaya. Klik di bawah ini.
-    """
-    
     # Create an inline keyboard with store link
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/Galerifsyrl")]
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
     ])
 
-    # Send user details and store button
-    await client.send_message(chat_id, user_details, reply_markup=keyboard)
+    # Send profile photo if available
+    if profile_pic:
+        await client.send_photo(
+            chat_id,
+            photo=profile_pic,
+            caption=user_details + "\nStore aman dan terpercaya. Klik di bawah ini.",
+            reply_markup=keyboard
+        )
+    else:
+        await client.send_message(
+            chat_id, 
+            user_details + "\nStore aman dan terpercaya. Klik di bawah ini.", 
+            reply_markup=keyboard
+        )
 
 # Handle forwarded messages (both from group and private)
 @app.on_message(filters.forwarded)
@@ -90,39 +126,52 @@ async def forward_handler(client: Client, message: Message):
     fwd = message.forward_from or message.forward_from_chat
     user = message.from_user
     
+    # Get user details and profile photo
+    user_details, profile_pic = await get_user_detail(user, client)
+    
     # Get forwarded message details
     if message.forward_from_chat:
         # For messages forwarded from channels/groups
+        chat_date = datetime.fromtimestamp(message.forward_from_chat.id >> 32)
+        chat_date_str = chat_date.strftime('%d %B %Y')
+        
         me = f"""
 👤 Pengirim:
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
+  Tanggal Pembuatan: {date_str}
 
 📢 Dari Channel/Grup:
   Nama: {message.forward_from_chat.title}
   ID: {message.forward_from_chat.id}
   Username: @{message.forward_from_chat.username if message.forward_from_chat.username else "Tidak ada"}
+  Tanggal Pembuatan: {chat_date_str}
         """
     else:
         # For messages forwarded from users
+        fwd_details = await get_user_detail(fwd, client) if fwd else ("Tidak bisa mengambil informasi dari pesan ini.", None)
         me = f"""
 👤 Pengirim:
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
+  Tanggal Pembuatan: {date_str}
 
 👤 Pesan asli dari:
-{get_user_detail(fwd) if fwd else "Tidak bisa mengambil informasi dari pesan ini."}
+{fwd_details[0]}
         """
     
     # Add inline keyboard to store
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/Galerifsyrl")]
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
     ])
     
-    # Send the forwarded message's user or group details
-    await message.reply_text(me, quote=True, reply_markup=keyboard)
+    # Send the forwarded message's user or group details with profile photo
+    if profile_pic:
+        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
+    else:
+        await message.reply_text(me, quote=True, reply_markup=keyboard)
 
 # Handle messages from group chats to get group/channel info
 @app.on_message(filters.text & filters.group)
@@ -138,8 +187,15 @@ async def getgroup_compatibly_handler(client: Client, message: Message):
 # Get group/channel details if the user forwards from a group/channel
 @app.on_message(filters.command(["getgc"]))
 async def getgroup_handler(client: Client, message: Message):
-    me = get_user_detail(message.chat)
-    await message.reply_text(me, quote=True)
+    me, profile_pic = await get_user_detail(message.chat, client)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
+    ])
+    
+    if profile_pic:
+        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
+    else:
+        await message.reply_text(me, quote=True, reply_markup=keyboard)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
@@ -147,10 +203,14 @@ async def private_handler(client: Client, message: Message):
     username = re.sub(r"@+|https://t.me/", "", message.text)
     funcs = [get_users, get_channel]
     text = ""
+    profile_pic = None
 
     for func in funcs:
         try:
-            text = await func(username)
+            if func == get_users:
+                text, profile_pic = await func(username, client)
+            else:
+                text = await func(username)
             if text:
                 break
         except Exception as e:
@@ -158,20 +218,24 @@ async def private_handler(client: Client, message: Message):
             text = str(e)
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/Galerifsyrl")]
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
     ])
-    await message.reply_text(text, quote=True, reply_markup=keyboard)
+    
+    if profile_pic:
+        await message.reply_photo(profile_pic, caption=text, reply_markup=keyboard, quote=True)
+    else:
+        await message.reply_text(text, quote=True, reply_markup=keyboard)
 
 # Get user information by username
-async def get_users(username):
+async def get_users(username, client):
     user = await app.get_users(username)
-    return get_user_detail(user)
+    return await get_user_detail(user, client)
 
 # Get channel information by username
 async def get_channel(username):
     peer = await app.resolve_peer(username)
     result = await app.invoke(
-        raw.functions.channels.GetChannels(
+        functions.channels.GetChannels(
             id=[peer]
         )
     )
