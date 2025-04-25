@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import traceback
-from datetime import datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import Message, User, Chat
@@ -30,48 +29,41 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> s
     if user is None:
         return "Can't get hidden forwards!"
     
-    # Mengambil tanggal pembuatan akun
-    user_date = user.date if user.date else "Tidak Diketahui"
-    
     # Membuat detail pesan pengguna
     text = f"""
 👤 Mention: [{user.first_name}](tg://user?id={user.id})
 🆔 ID kamu: {user.id}
 🌐 Username: @{user.username if user.username else "Tidak ada"}
-📅 Tanggal Pembuatan: {user_date}
     """
     
     return text
 
 def getgroup_handler(group) -> str:
     if group.is_private:
-        group_date = group.date if group.date else "Tidak Diketahui"
-    else:
-        group_date = "Grup ini tidak private atau tidak dapat diakses."
-
-    return f"""
-Channel/group detail (you can also forward message to see detail):
+        group_details = f"""
+Channel/group detail:
 
 🆔 ID: -100{group.id}
 🌐 Username: @{group.username if group.username else "Tidak ada"}
 🏷 Title: {group.title}
-📅 Tanggal Pembuatan: {group_date}
-    """
+        """
+    else:
+        group_details = "Grup ini tidak private atau tidak dapat diakses."
+    return group_details
 
 def get_channel_detail(channel) -> str:
     if channel.is_private:
-        channel_date = channel.date if channel.date else "Tidak Diketahui"
-    else:
-        channel_date = "Channel ini tidak private atau tidak dapat diakses."
-    
-    return f"""
-Channel/group detail (you can also forward message to see detail):
+        channel_details = f"""
+Channel/group detail:
 
 🆔 ID: -100{channel.id}
 🌐 Username: @{channel.username if channel.username else "Tidak ada"}
 🏷 Title: {channel.title}
-📅 Tanggal Pembuatan: {channel_date}
-    """
+        """
+    else:
+        channel_details = "Channel ini tidak private atau tidak dapat diakses."
+    
+    return channel_details
 
 # Handle /start command - directly show the user's ID and information
 @app.on_message(filters.command(["start"]))
@@ -100,20 +92,16 @@ async def forward_handler(client: Client, message: Message):
     # Get forwarded message details
     if message.forward_from_chat:
         # For messages forwarded from channels/groups
-        chat_date = message.forward_from_chat.date if message.forward_from_chat.date else "Tidak Diketahui"
-        
         me = f"""
 👤 Pengirim:
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
-  Tanggal Pembuatan: {user_details}
 
 📢 Dari Channel/Grup:
   Nama: {message.forward_from_chat.title}
   ID: {message.forward_from_chat.id}
   Username: @{message.forward_from_chat.username if message.forward_from_chat.username else "Tidak ada"}
-  Tanggal Pembuatan: {chat_date}
         """
     else:
         # For messages forwarded from users
@@ -123,7 +111,6 @@ async def forward_handler(client: Client, message: Message):
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
-  Tanggal Pembuatan: {user_details}
 
 👤 Pesan asli dari:
 {fwd_details}
