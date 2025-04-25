@@ -9,7 +9,7 @@ import re
 import traceback
 
 from pyrogram import Client, filters
-from pyrogram.types import Message, User, Chat
+from pyrogram.types import Message, User, Chat, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.raw import functions
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
@@ -74,10 +74,16 @@ async def start_handler(client: Client, message: Message):
     # Get user details
     user_details = await get_user_detail(user, client)
 
+    # Create an inline keyboard with store link
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
+    ])
+
     # Send user details to chat
     await client.send_message(
         chat_id, 
-        user_details + "\nStore aman dan terpercaya. Klik di bawah ini."
+        user_details + "\nStore aman dan terpercaya. Klik di bawah ini.",
+        reply_markup=keyboard
     )
 
 # Handle forwarded messages (both from group and private)
@@ -116,61 +122,59 @@ async def forward_handler(client: Client, message: Message):
 {fwd_details}
         """
     
+    # Create an inline keyboard with store link
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
+    ])
+    
     # Send the forwarded message's user or group details
-    await message.reply_text(me, quote=True)
-
-# Handle messages from group chats to get group/channel info
-@app.on_message(filters.text & filters.group)
-async def getgroup_compatibly_handler(client: Client, message: Message):
-    text = message.text
-    if getattr(message.forward_from_chat, "type", None) == "channel" or not re.findall(r"^/getgc@.*bot$", text):
-        logging.warning("This is from a channel or non-command text")
-        return
-
-    logging.info("Compatibly getgroup")
-    await getgroup_handler(client, message)
-
-# Get group/channel details if the user forwards from a group/channel
-@app.on_message(filters.command(["getgc"]))
-async def getgroup_handler(client: Client, message: Message):
-    me = await get_user_detail(message.chat, client)
-    await message.reply_text(me, quote=True)
+    await message.reply_text(me, quote=True, reply_markup=keyboard)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
 async def private_handler(client: Client, message: Message):
     username = re.sub(r"@+|https://t.me/", "", message.text)
-    funcs = [get_users, get_channel]
-    text = ""
-
-    for func in funcs:
+    
+    # Check if it is a channel or user
+    if message.text.startswith("https://t.me/"):
+        # Try to get channel details
         try:
-            if func == get_users:
-                text = await func(username, client)
-            else:
-                text = await func(username)
-            if text:
-                break
+            peer = await app.resolve_peer(username)
+            result = await app.invoke(
+                functions.channels.GetChannels(
+                    id=[peer]
+                )
+            )
+            # Send channel details
+            channel_details = get_channel_detail(result)
+            await message.reply_text(channel_details, quote=True)
         except Exception as e:
-            logging.error(traceback.format_exc())
-            text = str(e)
+            await message.reply_text(f"Error: {str(e)}", quote=True)
+    else:
+        # Try to get user details
+        try:
+            user = await app.get_users(username)
+            user_details = await get_user_detail(user, client)
+            await message.reply_text(user_details, quote=True)
+        except Exception as e:
+            await message.reply_text(f"Error: {str(e)}", quote=True)
 
-    await message.reply_text(text, quote=True)
+# Handle /info command - provide usage instructions
+@app.on_message(filters.command(["info"]))
+async def info_handler(client: Client, message: Message):
+    info_text = """
+🤖 **Cara Penggunaan Bot:**
 
-# Get user information by username
-async def get_users(username, client):
-    user = await app.get_users(username)
-    return await get_user_detail(user, client)
+1. **/start** - Menampilkan ID dan informasi pengguna Anda.
+2. **Kirimkan username atau link grup/channel** - Bot akan menampilkan detail grup/channel berdasarkan username atau link.
+3. **/info** - Menampilkan informasi tentang cara menggunakan bot ini.
+4. **Tombol "Ferdi Store"** - Klik tombol ini untuk mengunjungi Ferdi Store yang aman dan terpercaya.
 
-# Get channel information by username
-async def get_channel(username):
-    peer = await app.resolve_peer(username)
-    result = await app.invoke(
-        functions.channels.GetChannels(
-            id=[peer]
-        )
-    )
-    return get_channel_detail(result)
+🛒 **Tautan ke Ferdi Store**: [Ferdi Store](https://t.me/FerdiStore)
+    """
+    
+    # Send the usage instructions
+    await message.reply_text(info_text)
 
 if __name__ == '__main__':
     app.run()
