@@ -36,18 +36,26 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> t
     
     # Get user creation date
     user_dc_id = user.dc_id if hasattr(user, 'dc_id') else None
-    user_date = datetime.fromtimestamp(user.id >> 32) if user.id else None
-    date_str = user_date.strftime('%d %B %Y') if user_date else "Unknown"
+    
+    # Calculate creation date from user ID
+    user_id_bin = bin(user.id)[2:] if user.id else None
+    if user_id_bin and len(user_id_bin) >= 32:
+        timestamp = int(user_id_bin[:32], 2)
+        user_date = datetime.fromtimestamp(timestamp)
+        date_str = user_date.strftime('%d %B %Y %H:%M:%S')
+    else:
+        date_str = "Unknown"
     
     # Get profile photo if client is provided
     profile_pic = None
     if client:
         try:
-            photos = await client.get_user_profile_photos(user.id)  # Fixed method
-            if photos:
-                profile_pic = photos[0].file_id
+            photos = await client.get_chat_photos(user.id, limit=1)
+            if photos and len(photos) > 0:
+                profile_pic = photos[0]
         except Exception as e:
-            logging.error(f"Error getting profile photos: {e}")
+            logging.error(f"Error getting profile photo: {e}")
+            pass
     
     # Create a detailed user info message
     text = f"""
@@ -65,8 +73,13 @@ def getgroup_handler(group) -> str:
     service_count += 1
     
     # Get group creation date
-    group_date = datetime.fromtimestamp(group.chats[0].id >> 32)
-    date_str = group_date.strftime('%d %B %Y')
+    group_id_bin = bin(group.chats[0].id)[2:]
+    if len(group_id_bin) >= 32:
+        timestamp = int(group_id_bin[:32], 2)
+        group_date = datetime.fromtimestamp(timestamp)
+        date_str = group_date.strftime('%d %B %Y %H:%M:%S')
+    else:
+        date_str = "Unknown"
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
@@ -82,8 +95,13 @@ def get_channel_detail(channel) -> str:
     service_count += 1
     
     # Get channel creation date
-    channel_date = datetime.fromtimestamp(channel.chats[0].id >> 32)
-    date_str = channel_date.strftime('%d %B %Y')
+    channel_id_bin = bin(channel.chats[0].id)[2:]
+    if len(channel_id_bin) >= 32:
+        timestamp = int(channel_id_bin[:32], 2)
+        channel_date = datetime.fromtimestamp(timestamp)
+        date_str = channel_date.strftime('%d %B %Y %H:%M:%S')
+    else:
+        date_str = "Unknown"
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
@@ -110,15 +128,13 @@ async def start_handler(client: Client, message: Message):
 
     # Send profile photo if available
     if profile_pic:
-        await client.send_photo(
-            chat_id,
-            photo=profile_pic,
+        await message.reply_photo(
+            photo=profile_pic.file_id,
             caption=user_details + "\nStore aman dan terpercaya. Klik di bawah ini.",
             reply_markup=keyboard
         )
     else:
-        await client.send_message(
-            chat_id, 
+        await message.reply_text(
             user_details + "\nStore aman dan terpercaya. Klik di bawah ini.", 
             reply_markup=keyboard
         )
@@ -135,15 +151,20 @@ async def forward_handler(client: Client, message: Message):
     # Get forwarded message details
     if message.forward_from_chat:
         # For messages forwarded from channels/groups
-        chat_date = datetime.fromtimestamp(message.forward_from_chat.id >> 32)
-        chat_date_str = chat_date.strftime('%d %B %Y')
+        chat_id_bin = bin(message.forward_from_chat.id)[2:]
+        if len(chat_id_bin) >= 32:
+            timestamp = int(chat_id_bin[:32], 2)
+            chat_date = datetime.fromtimestamp(timestamp)
+            chat_date_str = chat_date.strftime('%d %B %Y %H:%M:%S')
+        else:
+            chat_date_str = "Unknown"
         
         me = f"""
 👤 Pengirim:
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
-  Tanggal Pembuatan: {date_str}
+  Tanggal Pembuatan: {chat_date_str}
 
 📢 Dari Channel/Grup:
   Nama: {message.forward_from_chat.title}
@@ -159,7 +180,7 @@ async def forward_handler(client: Client, message: Message):
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
-  Tanggal Pembuatan: {date_str}
+  Tanggal Pembuatan: {chat_date_str}
 
 👤 Pesan asli dari:
 {fwd_details[0]}
@@ -172,9 +193,9 @@ async def forward_handler(client: Client, message: Message):
     
     # Send the forwarded message's user or group details with profile photo
     if profile_pic:
-        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
+        await message.reply_photo(photo=profile_pic.file_id, caption=me, reply_markup=keyboard)
     else:
-        await message.reply_text(me, quote=True, reply_markup=keyboard)
+        await message.reply_text(me, reply_markup=keyboard)
 
 # Handle messages from group chats to get group/channel info
 @app.on_message(filters.text & filters.group)
@@ -196,9 +217,9 @@ async def getgroup_handler(client: Client, message: Message):
     ])
     
     if profile_pic:
-        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
+        await message.reply_photo(photo=profile_pic.file_id, caption=me, reply_markup=keyboard)
     else:
-        await message.reply_text(me, quote=True, reply_markup=keyboard)
+        await message.reply_text(me, reply_markup=keyboard)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
@@ -225,9 +246,9 @@ async def private_handler(client: Client, message: Message):
     ])
     
     if profile_pic:
-        await message.reply_photo(profile_pic, caption=text, reply_markup=keyboard, quote=True)
+        await message.reply_photo(photo=profile_pic.file_id, caption=text, reply_markup=keyboard)
     else:
-        await message.reply_text(text, quote=True, reply_markup=keyboard)
+        await message.reply_text(text, reply_markup=keyboard)
 
 # Get user information by username
 async def get_users(username, client):
