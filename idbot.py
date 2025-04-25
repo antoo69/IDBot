@@ -62,7 +62,7 @@ async def forward_handler(client: Client, message: Message):
 
 📢 Dari Channel/Grup:
   Nama: {message.forward_from_chat.title}
-  ID: <code>-100{message.forward_from_chat.id}</code>
+  ID: <code>{message.forward_from_chat.id}</code>
   Username: @{message.forward_from_chat.username if message.forward_from_chat.username else "Tidak ada"}
         """
     else:
