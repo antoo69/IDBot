@@ -96,7 +96,16 @@ Store : @FerdiStore
 
 @app.on_message(filters.text & filters.private & ~filters.command("info"))
 async def private_handler(client: Client, message: Message):
-    username = re.sub(r"@+|https://t.me/", "", message.text)
+    text = message.text
+    if "t.me/+" in text or "t.me/joinchat/" in text:
+        try:
+            chat = await client.get_chat(text)
+            return await message.reply_text(get_chat_detail(chat), quote=True)
+        except Exception as e:
+            logging.error(f"Error getting private chat: {e}")
+            return await message.reply_text("Tidak dapat mengakses grup/channel private tersebut. Pastikan bot sudah dimasukkan ke dalam grup.", quote=True)
+            
+    username = re.sub(r"@+|https://t.me/", "", text)
     funcs = [get_users, get_channel]
     text = ""
 
