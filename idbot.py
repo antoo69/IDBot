@@ -119,10 +119,14 @@ async def detect_private_group_or_channel(client, message: Message):
             quote=True
         )
 
-@app.on_message(filters.command(["info"], prefixes="/"))
-async def info_handler(client: Client, message: Message):
-    await message.reply_text(
-        """🛠 *Cara Penggunaan Bot ID*
+# Handle private messages to check user/channel details from a username or link
+@app.on_message(filters.text & filters.private)
+async def private_handler(client: Client, message: Message):
+    text = message.text.strip()
+
+    # Jika pengguna mengetik "/info", tampilkan panduan, jangan diproses sebagai username
+    if text.lower() == "/info":
+        usage_text = """🛠 *Cara Penggunaan Bot ID*
 ✅ Notes:
 1. Ketik /start maka bot akan mengirim id akun anda
 2. Cukup Kirimkan username anda, orang lain, group maupun channel: `@username`
@@ -133,9 +137,28 @@ Bot akan otomatis mendeteksi dan membalas dengan informasi yang tersedia.
 📌
 Owner : @fsyrl9
 Store : @FerdiStore
-        """,
-        quote=True
-    )
+        """
+        await message.reply_text(usage_text, quote=True)
+        return
+
+    username = re.sub(r"@+|https://t.me/", "", text)
+    funcs = [get_users, get_channel]
+    result_text = ""
+
+    for func in funcs:
+        try:
+            if func == get_users:
+                result_text = await func(username, client)
+            else:
+                result_text = await func(username)
+            if result_text:
+                break
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            result_text = str(e)
+
+    await message.reply_text(result_text, quote=True)
+
 
 if __name__ == '__main__':
     app.run()
