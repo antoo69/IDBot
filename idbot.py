@@ -32,7 +32,7 @@ def get_chat_detail(chat: Chat) -> str:
     return f"""
 📢 Info Grup/Channel:
 🏷 Nama: {chat.title}
-🆔 ID: <code>-100{chat.id}</code>
+🆔 ID: <code>{chat.id}</code>
 🌐 Username: @{chat.username if chat.username else "Tidak ada"}
 """
 
@@ -41,7 +41,7 @@ async def start_handler(client: Client, message: Message):
     user = message.from_user
     text = await get_user_detail(user, client)
     await message.reply_text(
-        text + "\nStore aman dan terpercaya. Klik di bawah ini.",
+        text + "Info lebih lanjut ketik /info \nStore aman dan terpercaya. Klik di bawah ini.",
         quote=True,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🛒 Ferdi Store", url="https://t.me/fsyrl9")]
