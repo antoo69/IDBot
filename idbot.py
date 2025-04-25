@@ -6,6 +6,7 @@ import traceback
 from pyrogram import Client, filters
 from pyrogram.types import Message, User, Chat, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.raw import functions
+from pyrogram.errors import BotMethodInvalid
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
@@ -98,12 +99,12 @@ Store : @FerdiStore
 async def private_handler(client: Client, message: Message):
     text = message.text
     if "t.me/+" in text or "t.me/joinchat/" in text:
-        try:
-            chat = await client.get_chat(text)
-            return await message.reply_text(get_chat_detail(chat), quote=True)
-        except Exception as e:
-            logging.error(f"Error getting private chat: {e}")
-            return await message.reply_text("Tidak dapat mengakses grup/channel private tersebut. Pastikan bot sudah dimasukkan ke dalam grup.", quote=True)
+        await message.reply_text(
+            "Maaf, bot tidak dapat mengakses tautan undangan grup/channel private. "
+            "Silakan gunakan username publik atau forward pesan dari grup/channel tersebut.",
+            quote=True
+        )
+        return
             
     username = re.sub(r"@+|https://t.me/", "", text)
     funcs = [get_users, get_channel]
