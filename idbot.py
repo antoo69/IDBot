@@ -44,9 +44,11 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> s
     return text
 
 def getgroup_handler(group) -> str:
-    # Mengambil tanggal pembuatan grup
-    group_date = group.date if group.date else "Tidak Diketahui"
-    
+    if group.is_private:
+        group_date = group.date if group.date else "Tidak Diketahui"
+    else:
+        group_date = "Grup ini tidak private atau tidak dapat diakses."
+
     return f"""
 Channel/group detail (you can also forward message to see detail):
 
@@ -57,8 +59,10 @@ Channel/group detail (you can also forward message to see detail):
     """
 
 def get_channel_detail(channel) -> str:
-    # Mengambil tanggal pembuatan channel
-    channel_date = channel.date if channel.date else "Tidak Diketahui"
+    if channel.is_private:
+        channel_date = channel.date if channel.date else "Tidak Diketahui"
+    else:
+        channel_date = "Channel ini tidak private atau tidak dapat diakses."
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
