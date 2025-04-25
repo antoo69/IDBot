@@ -1,8 +1,3 @@
-#!/usr/local/bin/python3
-# coding: utf-8
-
-author = "@fsyrl9"
-
 import logging
 import os
 import re
@@ -14,7 +9,6 @@ from pyrogram.raw import functions
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
-# Bot credentials
 TOKEN = os.getenv("TOKEN", "8033318643:AAHHrl-s2ZMCT895h7is6zSe35foQmtn8m8")
 APP_ID = os.getenv("APP_ID", "23345148")
 APP_HASH = os.getenv("APP_HASH", "fe37a47fef4345512ed47c17d3306f0b")
@@ -24,91 +18,124 @@ def create_app():
 
 app = create_app()
 
-async def get_user_detail(user: "User", client: Client = None) -> str:
+async def get_user_detail(user: "User | Chat", client: Client = None) -> str:
     if user is None:
-        return "❌ Tidak bisa mengambil informasi pengguna."
-    
+        return "Tidak dapat mengambil info."
     return f"""
-👤 Pengguna:
-🆔 ID: {user.id}
-👤 Nama: {user.first_name}
+👤 Mention: [{user.first_name}](tg://user?id={user.id})
+🆔 ID kamu: <code>{user.id}</code>
 🌐 Username: @{user.username if user.username else "Tidak ada"}
 """
 
-def get_chat_detail(chat: "Chat") -> str:
+def get_chat_detail(chat: Chat) -> str:
     return f"""
-📢 Grup/Channel:
-🆔 ID: {chat.id}
+📢 Info Grup/Channel:
 🏷 Nama: {chat.title}
+🆔 ID: <code>-100{chat.id}</code>
 🌐 Username: @{chat.username if chat.username else "Tidak ada"}
 """
 
-# /start command
-@app.on_message(filters.command(["start"]))
+@app.on_message(filters.command(["start"], prefixes="/"))
 async def start_handler(client: Client, message: Message):
-    text = await get_user_detail(message.from_user, client)
+    user = message.from_user
+    text = await get_user_detail(user, client)
     await message.reply_text(
-        text + "\n\nStore aman dan terpercaya 👇",
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🛒 Ferdi Store", url="https://t.me/fsyrl9")]]
-        )
+        text + "\nStore aman dan terpercaya. Klik di bawah ini.",
+        quote=True,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🛒 Ferdi Store", url="https://t.me/fsyrl9")]
+        ])
     )
 
-# /info command
-@app.on_message(filters.command(["info"]))
-async def info_command(client: Client, message: Message):
+@app.on_message(filters.forwarded)
+async def forward_handler(client: Client, message: Message):
+    fwd = message.forward_from or message.forward_from_chat
+    user = message.from_user
+
+    if message.forward_from_chat:
+        me = f"""
+👤 Pengirim:
+  Nama: {user.first_name}
+  ID: <code>{user.id}</code>
+  Username: @{user.username if user.username else "Tidak ada"}
+
+📢 Dari Channel/Grup:
+  Nama: {message.forward_from_chat.title}
+  ID: <code>-100{message.forward_from_chat.id}</code>
+  Username: @{message.forward_from_chat.username if message.forward_from_chat.username else "Tidak ada"}
+        """
+    else:
+        fwd_details = await get_user_detail(fwd, client) if fwd else "Tidak bisa mengambil informasi."
+        me = f"""
+👤 Pengirim:
+  Nama: {user.first_name}
+  ID: <code>{user.id}</code>
+  Username: @{user.username if user.username else "Tidak ada"}
+
+👤 Pesan asli dari:
+{fwd_details}
+        """
+
+    await message.reply_text(me, quote=True)
+
+@app.on_message(filters.text & filters.private)
+async def private_handler(client: Client, message: Message):
+    username = re.sub(r"@+|https://t.me/", "", message.text)
+    funcs = [get_users, get_channel]
+    text = ""
+
+    for func in funcs:
+        try:
+            if func == get_users:
+                text = await func(username, client)
+            else:
+                text = await func(username)
+            if text:
+                break
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            text = str(e)
+
+    await message.reply_text(text, quote=True)
+
+async def get_users(username, client):
+    user = await app.get_users(username)
+    return await get_user_detail(user, client)
+
+async def get_channel(username):
+    peer = await app.resolve_peer(username)
+    result = await app.invoke(functions.channels.GetChannels(id=[peer]))
+    for ch in result.chats:
+        return get_chat_detail(ch)
+    return "Channel/Group tidak ditemukan."
+
+@app.on_message(filters.text & (filters.group | filters.channel))
+async def detect_private_group_or_channel(client, message: Message):
+    chat = message.chat
+    if chat.username is None:
+        chat_type = "Grup" if chat.type in ["group", "supergroup"] else "Channel"
+        await message.reply_text(
+            f"📢 Terdeteksi {chat_type} private:\n🏷 Nama: {chat.title}\n🆔 ID: <code>-100{chat.id}</code>",
+            quote=True
+        )
+
+@app.on_message(filters.command(["info"], prefixes="/"))
+async def info_handler(client: Client, message: Message):
     await message.reply_text(
         """🛠 *Cara Penggunaan Bot ID*
-
-✅ Kirim:
-1. Username seperti: `@username`
-2. Link seperti: `https://t.me/username`
-3. Forward pesan dari pengguna, grup, atau channel
-
+✅ Notes:
+1. Ketik /start maka bot akan mengirim id akun anda
+2. Cukup Kirimkan username anda, orang lain, group maupun channel: `@username`
+3. Link seperti: `https://t.me/username`
+4. Forward pesan dari pengguna, grup, atau channel
+5. Tidak bisa untuk group/channel private
 Bot akan otomatis mendeteksi dan membalas dengan informasi yang tersedia.
-
-📌 Tidak perlu pakai perintah /getgc lagi.
+📌
+Owner : @fsyrl9
+Store : @FerdiStore
         """,
         quote=True
     )
 
-# Handle forwarded messages
-@app.on_message(filters.forwarded)
-async def handle_forwarded(client: Client, message: Message):
-    user = message.forward_from
-    chat = message.forward_from_chat
-
-    if user:
-        text = await get_user_detail(user, client)
-    elif chat:
-        text = get_chat_detail(chat)
-    else:
-        text = "❌ Tidak bisa mengambil informasi dari pesan ini."
-
-    await message.reply_text(text, quote=True)
-
-# Handle text messages for @username or t.me/...
-@app.on_message(filters.text & filters.private)
-async def handle_text(client: Client, message: Message):
-    username = message.text.strip()
-
-    # Bersihkan dari awalan @ atau link t.me
-    username = re.sub(r"^(https?://)?(t\.me/|@)", "", username)
-
-    try:
-        try:
-            user = await client.get_users(username)
-            text = await get_user_detail(user, client)
-        except Exception:
-            peer = await client.resolve_peer(username)
-            result = await client.invoke(functions.channels.GetChannels(id=[peer]))
-            chat = result.chats[0]
-            text = get_chat_detail(chat)
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        text = f"❌ Gagal mengambil data.\n{str(e)}"
-
-    await message.reply_text(text, quote=True)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run()
