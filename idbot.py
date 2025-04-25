@@ -42,9 +42,12 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> t
     # Get profile photo if client is provided
     profile_pic = None
     if client:
-        photos = await client.get_profile_photos(user.id)
-        if photos:
-            profile_pic = photos[0].file_id
+        try:
+            photos = await client.get_user_profile_photos(user.id)  # Fixed method
+            if photos:
+                profile_pic = photos[0].file_id
+        except Exception as e:
+            logging.error(f"Error getting profile photos: {e}")
     
     # Create a detailed user info message
     text = f"""
@@ -57,13 +60,13 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> t
     
     return text, profile_pic
 
-# Get group/channel creation date
 def getgroup_handler(group) -> str:
     global service_count
     service_count += 1
     
-    # Tidak ada cara untuk mendapatkan tanggal pembuatan grup secara akurat
-    date_str = "Tanggal pembuatan tidak tersedia"
+    # Get group creation date
+    group_date = datetime.fromtimestamp(group.chats[0].id >> 32)
+    date_str = group_date.strftime('%d %B %Y')
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
@@ -74,13 +77,13 @@ Channel/group detail (you can also forward message to see detail):
 📅 Tanggal Pembuatan: {date_str}
     """
 
-# Get channel detail
 def get_channel_detail(channel) -> str:
     global service_count
     service_count += 1
     
-    # Tidak ada cara untuk mendapatkan tanggal pembuatan channel secara akurat
-    date_str = "Tanggal pembuatan tidak tersedia"
+    # Get channel creation date
+    channel_date = datetime.fromtimestamp(channel.chats[0].id >> 32)
+    date_str = channel_date.strftime('%d %B %Y')
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
