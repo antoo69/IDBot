@@ -134,7 +134,7 @@ async def get_channel(username):
         return get_chat_detail(ch)
     return "Channel/Group tidak ditemukan."
 
-@app.on_message(filters.text & (filters.group | filters.channel))
+@app.on_message(filters.text & filters.private))
 async def detect_private_group_or_channel(client, message: Message):
     chat = message.chat
     if chat.username is None:
