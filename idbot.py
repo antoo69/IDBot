@@ -17,7 +17,7 @@ from pyrogram.raw import functions
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
 # Replace the following with your bot's credentials
-TOKEN = os.getenv("TOKEN", "8033318643:AAHHrl-s2ZMCT895h7is6zSe35foQmtn8m8")
+TOKEN = os.getenv("TOKEN", "7568080253:AAFTljQwDwRoP7D1IxmgTcN2Gw1OS-OkFSk")
 APP_ID = os.getenv("APP_ID", "23345148")
 APP_HASH = os.getenv("APP_HASH", "fe37a47fef4345512ed47c17d3306f0b")
 
@@ -42,12 +42,9 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> t
     # Get profile photo if client is provided
     profile_pic = None
     if client:
-        try:
-            photos = await client.get_chat_photos(user.id)
-            if photos:
-                profile_pic = photos[0].file_id
-        except:
-            pass
+        photos = await client.get_profile_photos(user.id)
+        if photos:
+            profile_pic = photos[0].file_id
     
     # Create a detailed user info message
     text = f"""
@@ -60,13 +57,13 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> t
     
     return text, profile_pic
 
+# Get group/channel creation date
 def getgroup_handler(group) -> str:
     global service_count
     service_count += 1
     
-    # Get group creation date
-    group_date = datetime.fromtimestamp(group.chats[0].id >> 32)
-    date_str = group_date.strftime('%d %B %Y')
+    # Tidak ada cara untuk mendapatkan tanggal pembuatan grup secara akurat
+    date_str = "Tanggal pembuatan tidak tersedia"
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
@@ -77,13 +74,13 @@ Channel/group detail (you can also forward message to see detail):
 📅 Tanggal Pembuatan: {date_str}
     """
 
+# Get channel detail
 def get_channel_detail(channel) -> str:
     global service_count
     service_count += 1
     
-    # Get channel creation date
-    channel_date = datetime.fromtimestamp(channel.chats[0].id >> 32)
-    date_str = channel_date.strftime('%d %B %Y')
+    # Tidak ada cara untuk mendapatkan tanggal pembuatan channel secara akurat
+    date_str = "Tanggal pembuatan tidak tersedia"
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
@@ -110,13 +107,15 @@ async def start_handler(client: Client, message: Message):
 
     # Send profile photo if available
     if profile_pic:
-        await message.reply_photo(
+        await client.send_photo(
+            chat_id,
             photo=profile_pic,
             caption=user_details + "\nStore aman dan terpercaya. Klik di bawah ini.",
             reply_markup=keyboard
         )
     else:
-        await message.reply_text(
+        await client.send_message(
+            chat_id, 
             user_details + "\nStore aman dan terpercaya. Klik di bawah ini.", 
             reply_markup=keyboard
         )
@@ -170,9 +169,9 @@ async def forward_handler(client: Client, message: Message):
     
     # Send the forwarded message's user or group details with profile photo
     if profile_pic:
-        await message.reply_photo(photo=profile_pic, caption=me, reply_markup=keyboard)
+        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
     else:
-        await message.reply_text(me, reply_markup=keyboard)
+        await message.reply_text(me, quote=True, reply_markup=keyboard)
 
 # Handle messages from group chats to get group/channel info
 @app.on_message(filters.text & filters.group)
@@ -194,9 +193,9 @@ async def getgroup_handler(client: Client, message: Message):
     ])
     
     if profile_pic:
-        await message.reply_photo(photo=profile_pic, caption=me, reply_markup=keyboard)
+        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
     else:
-        await message.reply_text(me, reply_markup=keyboard)
+        await message.reply_text(me, quote=True, reply_markup=keyboard)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
@@ -223,9 +222,9 @@ async def private_handler(client: Client, message: Message):
     ])
     
     if profile_pic:
-        await message.reply_photo(photo=profile_pic, caption=text, reply_markup=keyboard)
+        await message.reply_photo(profile_pic, caption=text, reply_markup=keyboard, quote=True)
     else:
-        await message.reply_text(text, reply_markup=keyboard)
+        await message.reply_text(text, quote=True, reply_markup=keyboard)
 
 # Get user information by username
 async def get_users(username, client):
