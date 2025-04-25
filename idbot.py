@@ -42,9 +42,12 @@ async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> t
     # Get profile photo if client is provided
     profile_pic = None
     if client:
-        photos = await client.get_profile_photos(user.id)
-        if photos:
-            profile_pic = photos[0].file_id
+        try:
+            photos = await client.get_chat_photos(user.id)
+            if photos:
+                profile_pic = photos[0].file_id
+        except:
+            pass
     
     # Create a detailed user info message
     text = f"""
@@ -107,15 +110,13 @@ async def start_handler(client: Client, message: Message):
 
     # Send profile photo if available
     if profile_pic:
-        await client.send_photo(
-            chat_id,
+        await message.reply_photo(
             photo=profile_pic,
             caption=user_details + "\nStore aman dan terpercaya. Klik di bawah ini.",
             reply_markup=keyboard
         )
     else:
-        await client.send_message(
-            chat_id, 
+        await message.reply_text(
             user_details + "\nStore aman dan terpercaya. Klik di bawah ini.", 
             reply_markup=keyboard
         )
@@ -169,9 +170,9 @@ async def forward_handler(client: Client, message: Message):
     
     # Send the forwarded message's user or group details with profile photo
     if profile_pic:
-        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
+        await message.reply_photo(photo=profile_pic, caption=me, reply_markup=keyboard)
     else:
-        await message.reply_text(me, quote=True, reply_markup=keyboard)
+        await message.reply_text(me, reply_markup=keyboard)
 
 # Handle messages from group chats to get group/channel info
 @app.on_message(filters.text & filters.group)
@@ -193,9 +194,9 @@ async def getgroup_handler(client: Client, message: Message):
     ])
     
     if profile_pic:
-        await message.reply_photo(profile_pic, caption=me, reply_markup=keyboard, quote=True)
+        await message.reply_photo(photo=profile_pic, caption=me, reply_markup=keyboard)
     else:
-        await message.reply_text(me, quote=True, reply_markup=keyboard)
+        await message.reply_text(me, reply_markup=keyboard)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
@@ -222,9 +223,9 @@ async def private_handler(client: Client, message: Message):
     ])
     
     if profile_pic:
-        await message.reply_photo(profile_pic, caption=text, reply_markup=keyboard, quote=True)
+        await message.reply_photo(photo=profile_pic, caption=text, reply_markup=keyboard)
     else:
-        await message.reply_text(text, quote=True, reply_markup=keyboard)
+        await message.reply_text(text, reply_markup=keyboard)
 
 # Get user information by username
 async def get_users(username, client):
