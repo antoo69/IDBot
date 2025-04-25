@@ -1,3 +1,3 @@
-pyrogram==2.0.106
+pyrogram==2.0.109
 TgCrypto==1.2.5
 tgbot-ping
