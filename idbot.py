@@ -25,14 +25,17 @@ def create_app():
     return _app
 
 app = create_app()
+service_count = 0
 
-async def get_user_detail(user: User) -> str:
+async def get_user_detail(user: "Union[User, Chat]", client: Client = None) -> str:
+    global service_count
+    service_count += 1
     if user is None:
         return "Can't get hidden forwards!"
     
-    # Get user creation date from the ID
-    user_date = datetime.fromtimestamp(user.id >> 32)
-    date_str = user_date.strftime('%d %B %Y')
+    # Get user creation date
+    user_date = datetime.fromtimestamp(user.id >> 32) if user.id else None
+    date_str = user_date.strftime('%d %B %Y') if user_date else "Unknown"
     
     # Create a detailed user info message
     text = f"""
@@ -45,30 +48,36 @@ async def get_user_detail(user: User) -> str:
     return text
 
 def getgroup_handler(group) -> str:
-    # Get group creation date from the ID
-    group_date = datetime.fromtimestamp(group.id >> 32)
+    global service_count
+    service_count += 1
+    
+    # Get group creation date
+    group_date = datetime.fromtimestamp(group.chats[0].id >> 32)
     date_str = group_date.strftime('%d %B %Y')
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
 
-🆔 ID: {group.id}
-🌐 Username: @{group.username if group.username else "Tidak ada"}
-🏷 Title: {group.title}
+🆔 ID: -100{group.chats[0].id}
+🌐 Username: @{group.chats[0].username}
+🏷 Title: {group.chats[0].title}
 📅 Tanggal Pembuatan: {date_str}
     """
 
 def get_channel_detail(channel) -> str:
-    # Get channel creation date from the ID
-    channel_date = datetime.fromtimestamp(channel.id >> 32)
+    global service_count
+    service_count += 1
+    
+    # Get channel creation date
+    channel_date = datetime.fromtimestamp(channel.chats[0].id >> 32)
     date_str = channel_date.strftime('%d %B %Y')
     
     return f"""
 Channel/group detail (you can also forward message to see detail):
 
-🆔 ID: {channel.id}
-🌐 Username: @{channel.username if channel.username else "Tidak ada"}
-🏷 Title: {channel.title}
+🆔 ID: -100{channel.chats[0].id}
+🌐 Username: @{channel.chats[0].username}
+🏷 Title: {channel.chats[0].title}
 📅 Tanggal Pembuatan: {date_str}
     """
 
@@ -79,17 +88,12 @@ async def start_handler(client: Client, message: Message):
     user = message.from_user
 
     # Get user details
-    user_details = await get_user_detail(user)
+    user_details = await get_user_detail(user, client)
 
-    # Create an inline keyboard with store link
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
-    ])
-
+    # Send user details to chat
     await client.send_message(
         chat_id, 
-        user_details + "\nStore aman dan terpercaya. Klik di bawah ini.", 
-        reply_markup=keyboard
+        user_details + "\nStore aman dan terpercaya. Klik di bawah ini."
     )
 
 # Handle forwarded messages (both from group and private)
@@ -99,7 +103,7 @@ async def forward_handler(client: Client, message: Message):
     user = message.from_user
     
     # Get user details
-    user_details = await get_user_detail(user)
+    user_details = await get_user_detail(user, client)
     
     # Get forwarded message details
     if message.forward_from_chat:
@@ -112,7 +116,7 @@ async def forward_handler(client: Client, message: Message):
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
-  Tanggal Pembuatan: {user_details.split("\n")[3]}
+  Tanggal Pembuatan: {date_str}
 
 📢 Dari Channel/Grup:
   Nama: {message.forward_from_chat.title}
@@ -122,24 +126,20 @@ async def forward_handler(client: Client, message: Message):
         """
     else:
         # For messages forwarded from users
-        fwd_details = await get_user_detail(fwd) if fwd else "Tidak bisa mengambil informasi dari pesan ini."
+        fwd_details = await get_user_detail(fwd, client) if fwd else ("Tidak bisa mengambil informasi dari pesan ini.")
         me = f"""
 👤 Pengirim:
   Nama: {user.first_name}
   ID: {user.id}
   Username: @{user.username if user.username else "Tidak ada"}
-  Tanggal Pembuatan: {user_details.split("\n")[3]}
+  Tanggal Pembuatan: {date_str}
 
 👤 Pesan asli dari:
 {fwd_details}
         """
     
-    # Add inline keyboard to store
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
-    ])
-    
-    await message.reply_text(me, quote=True, reply_markup=keyboard)
+    # Send the forwarded message's user or group details
+    await message.reply_text(me, quote=True)
 
 # Handle messages from group chats to get group/channel info
 @app.on_message(filters.text & filters.group)
@@ -155,12 +155,8 @@ async def getgroup_compatibly_handler(client: Client, message: Message):
 # Get group/channel details if the user forwards from a group/channel
 @app.on_message(filters.command(["getgc"]))
 async def getgroup_handler(client: Client, message: Message):
-    me = await getgroup_handler(message.chat)
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
-    ])
-    
-    await message.reply_text(me, quote=True, reply_markup=keyboard)
+    me = await get_user_detail(message.chat, client)
+    await message.reply_text(me, quote=True)
 
 # Handle private messages to check user/channel details from a username
 @app.on_message(filters.text & filters.private)
@@ -181,16 +177,12 @@ async def private_handler(client: Client, message: Message):
             logging.error(traceback.format_exc())
             text = str(e)
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Ferdi Store", url="https://t.me/FerdiStore")]
-    ])
-    
-    await message.reply_text(text, quote=True, reply_markup=keyboard)
+    await message.reply_text(text, quote=True)
 
 # Get user information by username
 async def get_users(username, client):
     user = await app.get_users(username)
-    return await get_user_detail(user)
+    return await get_user_detail(user, client)
 
 # Get channel information by username
 async def get_channel(username):
