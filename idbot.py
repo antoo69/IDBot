@@ -9,7 +9,7 @@ import re
 import traceback
 
 from pyrogram import Client, filters
-from pyrogram.types import Message, User, Chat
+from pyrogram.types import Message, User, Chat, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.raw import functions
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
