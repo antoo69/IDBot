@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import traceback
+from datetime import datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import Message, User, Chat, InlineKeyboardMarkup, InlineKeyboardButton
@@ -34,6 +35,22 @@ def get_chat_detail(chat: Chat) -> str:
 🆔 ID: <code>{chat.id}</code>
 🌐 Username: @{chat.username if chat.username else "Tidak ada"}
 """
+
+def format_user_info(user: User, prefix="👤") -> str:
+    created_date = "newer than 10/2021 (?)"
+    if user.id < 1700000000:  # Rough estimate for accounts before 10/2021
+        created_date = "~ 11/2020 (?)"
+        
+    username_text = f"{user.username} (https://t.me/{user.username})" if user.username else "None"
+    
+    return f"""{prefix}
+ ├ id: {user.id}
+ ├ is_bot: {str(user.is_bot).lower()}
+ ├ first_name: {user.first_name}
+ ├ username: {username_text}
+ ├ language_code: {user.language_code if user.language_code else 'None'} (-)
+ ├ is_premium: {str(user.is_premium).lower() if user.is_premium is not None else 'None'}
+ └ created: {created_date}"""
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_handler(client: Client, message: Message):
@@ -68,30 +85,27 @@ async def forward_handler(client: Client, message: Message):
     user = message.from_user
     forwarded_user = message.forward_from
     forwarded_chat = message.forward_from_chat
-
-    teks = f"""
-👤 Pengirim:
-🆔 ID: <code>{user.id}</code>
-Username: @{user.username if user.username else "Tidak ada"}
-"""
-
+    
+    response = format_user_info(user, "👤 You")
+    
     if forwarded_user:
-        teks += f"""
-📨 Asal Pesan:
-👤 Dari user:
-🆔 ID: <code>{forwarded_user.id}</code>
-Username: @{forwarded_user.username if forwarded_user.username else "Tidak ada"}
-"""
-
+        response += "\n\n" + format_user_info(forwarded_user, "👤 Forwarded from")
+    
     if forwarded_chat:
-        teks += f"""
-📢 Dari Grup/Channel:
-🏷 Nama: {forwarded_chat.title}
-🆔 ID: <code>{forwarded_chat.id}</code>
-🌐 Username: @{forwarded_chat.username if forwarded_chat.username else "Tidak ada"}
-"""
+        response += f"""
 
-    await message.reply_text(teks, quote=True)
+📢 Forwarded from Group/Channel
+ ├ id: {forwarded_chat.id}
+ ├ title: {forwarded_chat.title}
+ └ username: {forwarded_chat.username if forwarded_chat.username else 'None'}"""
+    
+    if message.forward_date:
+        response += f"""
+
+📃 Message
+ └ forward_date: {message.forward_date.strftime('%a, %d %b %Y %H:%M:%S GMT')}"""
+        
+    await message.reply_text(response, quote=True)
 
 @app.on_message(filters.text & filters.private & ~filters.command("info") & ~filters.command("start"))
 async def private_handler(client: Client, message: Message):
