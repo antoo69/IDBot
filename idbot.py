@@ -85,6 +85,7 @@ async def forward_handler(client: Client, message: Message):
     user = message.from_user
     forwarded_user = message.forward_from
     forwarded_chat = message.forward_from_chat
+    forward_sender_name = message.forward_sender_name
     
     response = format_user_info(user, "👤 You")
     
@@ -105,6 +106,12 @@ async def forward_handler(client: Client, message: Message):
  ├ id: {forwarded_chat.id}
  ├ title: {forwarded_chat.title}
  └ username: {forwarded_chat.username if forwarded_chat.username else 'None'}"""
+    elif forward_sender_name:
+        response += f"""
+
+👤 Forwarded from Private User
+ └ name: {forward_sender_name}
+ └ note: User ini memiliki privasi forward message yang diaktifkan"""
     
     if message.forward_date:
         response += f"""
