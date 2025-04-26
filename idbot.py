@@ -25,7 +25,7 @@ async def get_user_detail(user: User | Chat, client: Client = None) -> str:
         return "Tidak dapat mengambil info."
     return f"""
 👤 Mention: [{user.first_name}](tg://user?id={user.id})
-🆔 ID kamu: <code>{user.id}</code>
+🆔 ID kamu: `<code>{user.id}</code>`
 🌐 Username: @{user.username if user.username else "Tidak ada"}
 """
 
@@ -33,7 +33,7 @@ def get_chat_detail(chat: Chat) -> str:
     return f"""
 📢 Info Grup/Channel:
 🏷 Nama: {chat.title}
-🆔 ID: <code>{chat.id}</code>
+🆔 ID: `-100<code>{chat.id}</code>`
 🌐 Username: @{chat.username if chat.username else "Tidak ada"}
 """
 
@@ -45,7 +45,7 @@ def format_user_info(user: User, prefix="👤") -> str:
     username_text = f"{user.username} (https://t.me/{user.username})" if user.username else "None"
     
     return f"""{prefix}
- ├ id: {user.id}
+ ├ id: `{user.id}`
  ├ is_bot: {str(user.is_bot).lower()}
  ├ first_name: {user.first_name}
  ├ username: {username_text}
@@ -95,7 +95,7 @@ async def forward_handler(client: Client, message: Message):
         response += f"""
 
 📢 From Group/Channel
- ├ id: {forwarded_chat.id}
+ ├ id: `-100{forwarded_chat.id}`
  ├ title: {forwarded_chat.title}
  └ username: {forwarded_chat.username if forwarded_chat.username else 'None'}"""
     elif forwarded_user:
@@ -104,7 +104,7 @@ async def forward_handler(client: Client, message: Message):
         response += f"""
 
 📢 Forwarded from Group/Channel
- ├ id: {forwarded_chat.id}
+ ├ id: `-100{forwarded_chat.id}`
  ├ title: {forwarded_chat.title}
  └ username: {forwarded_chat.username if forwarded_chat.username else 'None'}"""
     elif forward_sender_name:
