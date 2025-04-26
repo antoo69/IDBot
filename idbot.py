@@ -41,10 +41,10 @@ async def start_handler(client: Client, message: Message):
     user = message.from_user
     text = await get_user_detail(user, client)
     await message.reply_text(
-        text + "Info lebih lanjut ketik /info \nStore aman dan terpercaya. Klik di bawah ini.",
+        text + "\nInfo lebih lanjut ketik /info \nStore aman dan terpercaya. Klik di bawah ini.",
         quote=True,
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🛒 Ferdi Store", url="https://t.me/fsyrl9")]
+            [InlineKeyboardButton("🛒 Ferdi Store", url="https://t.me/FerdiStore")]
         ])
     )
 
