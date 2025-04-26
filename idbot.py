@@ -88,10 +88,17 @@ async def forward_handler(client: Client, message: Message):
     
     response = format_user_info(user, "👤 You")
     
-    if forwarded_user:
+    if forwarded_user and forwarded_chat:
         response += "\n\n" + format_user_info(forwarded_user, "👤 Forwarded from")
-    
-    if forwarded_chat:
+        response += f"""
+
+📢 From Group/Channel
+ ├ id: {forwarded_chat.id}
+ ├ title: {forwarded_chat.title}
+ └ username: {forwarded_chat.username if forwarded_chat.username else 'None'}"""
+    elif forwarded_user:
+        response += "\n\n" + format_user_info(forwarded_user, "👤 Forwarded from")
+    elif forwarded_chat:
         response += f"""
 
 📢 Forwarded from Group/Channel
