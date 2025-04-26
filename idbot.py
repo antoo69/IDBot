@@ -23,7 +23,7 @@ async def get_user_detail(user: "User | Chat", client: Client = None) -> str:
         return "Tidak dapat mengambil info."
     return f"""
 👤 Mention: [{user.first_name}](tg://user?id={user.id})
-🄚 ID kamu: <code>{user.id}</code>
+🆔 ID kamu: <code>{user.id}</code>
 🌐 Username: @{user.username if user.username else "Tidak ada"}
 """
 
@@ -31,7 +31,7 @@ def get_chat_detail(chat: Chat) -> str:
     return f"""
 💼 Info Grup/Channel:
 🏷 Nama: {chat.title}
-🄚 ID: <code>{chat.id}</code>
+🆔 ID: <code>{chat.id}</code>
 🌐 Username: @{chat.username if chat.username else "Tidak ada"}
 """
 
