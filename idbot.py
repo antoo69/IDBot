@@ -6,7 +6,6 @@ import traceback
 from pyrogram import Client, filters
 from pyrogram.types import Message, User, Chat, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.raw import functions
-from pyrogram.errors import BotMethodInvalid
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
@@ -24,15 +23,15 @@ async def get_user_detail(user: "User | Chat", client: Client = None) -> str:
         return "Tidak dapat mengambil info."
     return f"""
 👤 Mention: [{user.first_name}](tg://user?id={user.id})
-🆔 ID kamu: <code>{user.id}</code>
+🄚 ID kamu: <code>{user.id}</code>
 🌐 Username: @{user.username if user.username else "Tidak ada"}
 """
 
 def get_chat_detail(chat: Chat) -> str:
     return f"""
-📢 Info Grup/Channel:
+💼 Info Grup/Channel:
 🏷 Nama: {chat.title}
-🆔 ID: <code>{chat.id}</code>
+🄚 ID: <code>{chat.id}</code>
 🌐 Username: @{chat.username if chat.username else "Tidak ada"}
 """
 
@@ -48,7 +47,24 @@ async def start_handler(client: Client, message: Message):
         ])
     )
 
-@app.on_message(filters.forwarded)
+@app.on_message(filters.command("info", prefixes="/"))
+async def info_handler(client: Client, message: Message):
+    usage_text = """ 🛠 *Cara Penggunaan Bot ID*
+✅ Notes:
+1. Ketik /start maka bot akan mengirim id akun anda
+2. Cukup Kirimkan username anda, orang lain, group maupun channel: `@username`
+3. Link seperti: `https://t.me/username`
+4. Forward pesan dari pengguna, grup, atau channel
+5. Tidak bisa untuk group/channel private
+
+Bot akan otomatis mendeteksi dan membalas dengan informasi yang tersedia.
+📌
+Owner : @fsyrl9
+Store : @FerdiStore
+    """
+    await message.reply_text(usage_text, quote=True)
+
+@app.on_message(filters.forwarded & filters.private)
 async def forward_handler(client: Client, message: Message):
     fwd = message.forward_from or message.forward_from_chat
     user = message.from_user
@@ -60,7 +76,7 @@ async def forward_handler(client: Client, message: Message):
   ID: <code>{user.id}</code>
   Username: @{user.username if user.username else "Tidak ada"}
 
-📢 Dari Channel/Grup:
+💼 Dari Channel/Grup:
   Nama: {message.forward_from_chat.title}
   ID: <code>{message.forward_from_chat.id}</code>
   Username: @{message.forward_from_chat.username if message.forward_from_chat.username else "Tidak ada"}
@@ -79,25 +95,10 @@ async def forward_handler(client: Client, message: Message):
 
     await message.reply_text(me, quote=True)
 
-@app.on_message(filters.command("info"))
-async def info_handler(client: Client, message: Message):
-    usage_text = """🛠 *Cara Penggunaan Bot ID*
-✅ Notes:
-1. Ketik /start maka bot akan mengirim id akun anda
-2. Cukup Kirimkan username anda, orang lain, group maupun channel: `@username`
-3. Link seperti: `https://t.me/username`
-4. Forward pesan dari pengguna, grup, atau channel
-5. Tidak bisa untuk group/channel private
-Bot akan otomatis mendeteksi dan membalas dengan informasi yang tersedia.
-📌
-Owner : @fsyrl9
-Store : @FerdiStore
-    """
-    await message.reply_text(usage_text, quote=True)
-
-@app.on_message(filters.text & filters.private & ~filters.command("info"))
-async def private_handler(client: Client, message: Message):
+@app.on_message(filters.text & filters.private & ~filters.command(["start", "info"]))
+async def private_text_handler(client: Client, message: Message):
     text = message.text
+
     if "t.me/+" in text or "t.me/joinchat/" in text:
         await message.reply_text(
             "Maaf, bot tidak dapat mengakses tautan undangan grup/channel private. "
@@ -105,27 +106,27 @@ async def private_handler(client: Client, message: Message):
             quote=True
         )
         return
-            
+
     username = re.sub(r"@+|https://t.me/", "", text)
     funcs = [get_users, get_channel]
-    text = ""
+    response_text = ""
 
     for func in funcs:
         try:
             if func == get_users:
-                text = await func(username, client)
+                response_text = await func(username, client)
             else:
-                text = await func(username)
-            if text:
+                response_text = await func(username)
+            if response_text:
                 break
         except Exception as e:
             logging.error(traceback.format_exc())
-            text = str(e)
+            response_text = str(e)
 
-    await message.reply_text(text, quote=True)
+    await message.reply_text(response_text, quote=True)
 
 async def get_users(username, client):
-    user = await app.get_users(username)
+    user = await client.get_users(username)
     return await get_user_detail(user, client)
 
 async def get_channel(username):
@@ -134,16 +135,6 @@ async def get_channel(username):
     for ch in result.chats:
         return get_chat_detail(ch)
     return "Channel/Group tidak ditemukan."
-
-@app.on_message(filters.text & filters.private)
-async def detect_private_group_or_channel(client, message: Message):
-    chat = message.chat
-    if chat.username is None:
-        chat_type = "Grup" if chat.type in ["group", "supergroup"] else "Channel"
-        await message.reply_text(
-            f"📢 Terdeteksi {chat_type} private:\n🏷 Nama: {chat.title}\n🆔 ID: <code>-100{chat.id}</code>",
-            quote=True
-        )
 
 if __name__ == '__main__':
     app.run()
