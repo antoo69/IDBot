@@ -7,6 +7,7 @@ from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Message, User, Chat, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.raw import functions
+from pyrogram.errors import UsernameNotOccupied
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
@@ -136,31 +137,38 @@ async def private_handler(client: Client, message: Message):
     username = re.sub(r"@+|https://t.me/", "", text)
     funcs = [get_users, get_channel]
 
-    result_text = ""
+    result_text = "Tidak dapat menemukan pengguna/grup."
     for func in funcs:
         try:
-            if func == get_users:
-                result_text = await func(username)
-            else:
-                result_text = await func(username)
-            if result_text:
+            temp_result = await func(username)
+            if temp_result:
+                result_text = temp_result
                 break
+        except (UsernameNotOccupied, IndexError):
+            continue
         except Exception:
             logging.error(traceback.format_exc())
-            result_text = "Tidak dapat menemukan pengguna/grup." 
 
     await message.reply_text(result_text, quote=True)
 
 async def get_users(username: str) -> str:
-    user = await app.get_users(username)
-    return await get_user_detail(user)
+    try:
+        user = await app.get_users(username)
+        if not user:
+            return ""
+        return await get_user_detail(user)
+    except IndexError:
+        return ""
 
 async def get_channel(username: str) -> str:
-    peer = await app.resolve_peer(username)
-    result = await app.invoke(functions.channels.GetChannels(id=[peer]))
-    for ch in result.chats:
-        return get_chat_detail(ch)
-    return "Channel/Group tidak ditemukan."
+    try:
+        peer = await app.resolve_peer(username)
+        result = await app.invoke(functions.channels.GetChannels(id=[peer]))
+        for ch in result.chats:
+            return get_chat_detail(ch)
+        return ""
+    except Exception:
+        return ""
 
 if __name__ == '__main__':
     app.run()
