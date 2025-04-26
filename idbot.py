@@ -24,7 +24,7 @@ async def get_user_detail(user: User | Chat, client: Client = None) -> str:
     if not user:
         return "Tidak dapat mengambil info."
     return f"""
-👤 Mention: [{user.first_name}](tg://user?id={user.id})
+👤 Nama: [{user.first_name}](tg://user?id={user.id})
 🆔 ID kamu: `<code>{user.id}</code>`
 🌐 Username: @{user.username if user.username else "Tidak ada"}
 """
