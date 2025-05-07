@@ -62,7 +62,7 @@ def format_user_info(user: User, prefix="👤") -> str:
  ├ is_premium: {str(user.is_premium).lower() if user.is_premium is not None else 'None'}
  └ created: {created_date}"""
 
-@app.on_message(filters.command("start") & filters.private)
+@app.on_message(filters.command(["start"]) & filters.private)
 async def start_handler(client: Client, message: Message):
     try:
         user = message.from_user
@@ -87,7 +87,7 @@ async def start_handler(client: Client, message: Message):
                 ])
             )
     except Exception as e:
-        logging.error(f"Error in start_handler: {e}")
+        logging.error(f"Error in start_handler: {e}\n{traceback.format_exc()}")
         await message.reply_text("Terjadi kesalahan. Silakan coba lagi nanti.")
 
 @app.on_message(filters.command("info") & filters.private)
