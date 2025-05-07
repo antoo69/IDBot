@@ -12,9 +12,9 @@ from pyrogram.errors import UsernameNotOccupied
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(filename)s [%(levelname)s]: %(message)s')
 
 # Gunakan environment variables atau file config untuk credentials yang aman
-TOKEN = os.getenv("BOT_TOKEN") # Hapus default value
-APP_ID = int(os.getenv("API_ID")) # Hapus default value  
-APP_HASH = os.getenv("API_HASH") # Hapus default value
+TOKEN = os.getenv("TOKEN", "8033318643:AAHHrl-s2ZMCT895h7is6zSe35foQmtn8m8")
+APP_ID = int(os.getenv("APP_ID", "23345148"))
+APP_HASH = os.getenv("APP_HASH", "fe37a47fef4345512ed47c17d3306f0b")
 
 if not all([TOKEN, APP_ID, APP_HASH]):
     logging.error("Please set BOT_TOKEN, API_ID and API_HASH environment variables")
