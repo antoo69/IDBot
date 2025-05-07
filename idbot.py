@@ -58,7 +58,7 @@ async def start_handler(client: Client, message: Message):
     user = message.from_user
     text = await get_user_detail(user)
     # Get user's profile photo
-    photos = await client.get_profile_photos(user.id)
+    photos = await client.get_chat_photos(user.id)
     if photos and len(photos) > 0:
         await message.reply_photo(
             photo=photos[0].file_id,
